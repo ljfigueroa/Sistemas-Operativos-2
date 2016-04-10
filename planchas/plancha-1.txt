@@ -1,0 +1,180 @@
+1. La cantidad de memoria esta definida en el archivo
+machine/machine.cc:
+
+      mainMemory = new char[MemorySize];
+
+y se declara y define MemorySize en machine/machine.h:
+
+      const int PageSize = SectorSize; 
+      const int NumPhysPages = 32;
+      const int MemorySize = NumPhysPages * PageSize;
+
+y se encuentra SectorSize en machine/disk.h:
+
+     	const int SectorSize = 128; // number of bytes per disk sector
+	
+Por lo tanto la cantidad de memoria en la maquina simulada es de
+32 *128 bytes = 4096B = 4KiB.
+
+2. Cambiaría cuanta memoria tiene la maquina simulada modificando el
+valor en la variable NumPhysPages en machine/machine.h, la misma
+representa el numero de paginas físicas en memoria.
+
+3. El tamaño del disco está determinado por tamaño el de sector, por
+cantidad de sectores y por la cantidad de pistas, esos datos se los
+encuentra en machine/disk.h:
+
+     const int SectorSize = 128; // number of bytes per disk sector
+     const int SectorsPerTrack = 32; // number of sectors per disk
+     track const int NumTracks = 32; // number of tracks per disk
+     const int NumSectors = SectorsPerTrack * NumTracks; // total # of
+     	       		    		      		 // sectors per disk
+
+Por lo tanto el tamaño del disco es 128B * 32 * 32 = 131072B = 128KiB.
+
+4. Nachos simula 58 instrucciones de MIPS. Haciendo grep sobre
+mipssim.h hay 60 operaciones definidas pero dos de ellas no pertenecen
+al estándar, siendo estas OP_UNIMP y OP_RES.
+
+> grep "#define OP_" machine/mipssim.h | wc -l
+60
+
+5. El código guarda en sum la suma de los registros rs y rt. Si las
+cond1 y cond2 se cumplen lanza un excepción de overflow, en otro caso
+devuelve la suma en rt.
+
+cond1: no sucede que el bit significativo del xor entre los registros
+rs y rt es 1. Es decir que tienen el mismo signo rs y rt.
+
+cond2: el xor entre rs y sum tiene como bit significativo 1. Es decir
+que rs y sum tienen distinto signo y como por la cond1 rs y rt tienen
+el mismo el signo por lo tanto el resultado de la suma debería tener
+el mismo signo que rs.
+
+6.
+
+DEBUG : threads/utility.cc
+      DebugIsEnabled		threads/utility.cc
+      va_start			stdarg.h
+      vfprintf			stdio.h
+      va_end			stdarg.h
+      fflush			stdio.h
+
+Initialize: thread/system.cc
+      strcmp			string.h
+      ASSERT			threads/utility.h
+      RandomInit		machine/sysdep.cc
+      atoi			stdlib.h
+      DebugInit			threads/utility.cc
+      setStatus			machine/interrupt.h
+      Enable			machine/interrupt.cc
+      CallOnUserAbort		machine/sysdep.cc
+      Cleanup			threads/system.cc
+      SetUp			threads/preemptive.cc
+
+Threadtest: threads/threadtest.cc
+      DEBUG			threads/utility.cc
+      strcpy			string.h
+      Fork			threads/thread.cc
+      SimpleThread		threads/threadtest.cc
+strcmp: string.h
+
+printf: stdio.h
+
+Finish: threads/thread.cc
+      SetLevel			machine/interrupt.cc
+      ASSERT			threads/utility.h
+      DEBUG			threads/utility.cc
+      Sleep			threads/thread.cc      
+
+7. Se prefiere emular una CPU porque NACHOS fue desarrollado para
+fines didácticos donde lo que se busca es una forma sencilla y rápida
+de probar modificaciones o en el caso de que haya un error y se
+cuelgue la CPU no tengamos que reiniciar el sistema completo donde lo
+estamos probando sino que simplemente podemos matar el proceso en el
+sistema anfitrión. Otra ventaja es cuan portable es, ya que no se
+necesita un procesador MIPS para trabajar sino plataforma donde se
+pueda correr la maquina virtual MIPS.
+
+8. Las distintas banderas de depuración son:
+   '+' -- activa todos los mensajes de depuración 
+   't' -- sistema de hilos
+   's' -- semáforos, bloqueos y condiciones
+   'i' -- emulación de interrupciones
+   'm' -- emulación de la máquina (USER_PROGRAM)
+   'd' -- emulación del disco (FILESYS)
+   'f' -- sistema de archivos (FILESYS)
+   'a' -- espacio de direcciones (USER_PROGRAM)
+   'n' -- emulación de red (NETWORK)
+
+9.  La macro ASSERT imprime por la stderr un mensaje de error si la
+condición evaluada no se cumple, indicando la linea y el archivo donde
+ocurrió.
+
+La macro DEBUG imprime un mensaje si la la bandera está habilitada. Es
+como un printf solamente con un argumento más en el frente.
+
+10. Las constantes se definen en:
+    USER_PROGRAM:     filesys/Makefile
+    		      network/Makefile
+		      userprog/Makefile
+		      vm/Makefile
+
+    FILESYS_NEEDED:   filesys/Makefile
+    		      network/Makefile
+		      userprog/Makefile
+		      vm/Makefile
+
+    FILESYS_STUB:     userprog/Makefile
+    		      vm/Makefile
+    		      
+    NETWORK:	      network/Makefile
+		      
+11. La diferencia entre las clases list y synchlist está en como
+implementan el acceso a las mismas. El acceso a una estructura de list
+es el tradicional a el de una lista enlazada con las mismas
+desventajas que puede traer al usarlas en un sistema concurrente,
+mientras que el acceso a una synchlist respeta las siguientes pautas:
+
+   1. Los threads tratando de remover un elemento de la lista van a
+   esperar hasta que la lista tenga un elemento en ella.
+   2. Solo un thread en un momento dado puede acceder a la estructura de
+   datos de la lista.
+
+12. La función main aparece en los siguientes archivos:
+    bin/out.c
+    bin/main.c
+    bin/disasm.c
+    bin/coff2flat.c
+    bin/coff2noff.c
+    test/matmult.c
+    test/shell.c
+    test/filetest.c
+    test/sort.c
+    test/halt.c
+    threads/main.cc
+
+La función main del ejecutable "nachos" está definida en
+threads/main.cc.
+El makefile dentro de userprog importa Makefile.common donde se define
+PROGRAM = nachos y donde el único archivo listado arriba que se
+encuentra en Makefile.common es threads/main.cc.
+
+
+13. Nachos soporta los siguientes parámetros al ejecutarlo en la linea
+de comandos:
+
+Uso: nachos -d <banderas de depuración> -rs <semilla aleatoria #>
+     	    -s -x <achivo nachos> -c <entrada consola> <salida consola>
+	    -f -cp <archivo unix> <archivo nachos>
+	    -p <archivo nachos> -r <archivo nachos> -l -D -t
+	    -n <confiabilidad de red> -m <identificador de maquina>
+	    -o <otro identificador de maquina>
+	    -z
+Donde:
+	-d causa que ciertos mensajes de depuración sean impresos
+         (cf. utility.h)
+	-rs causa que Yield ocurra de manera aleatoria (pero
+             repetible). Es decir que produce cambios de contexto
+             aleatorios.
+	-z imprime el mensaje de derecho de copia.
