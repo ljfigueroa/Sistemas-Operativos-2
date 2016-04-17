@@ -30,6 +30,10 @@
 static Semaphore sem = Semaphore("ej14",3);
 #endif
 
+#ifdef LOCK_TEST
+static Lock l = Lock("ej1");
+#endif
+
 void
 SimpleThread(void* name)
 {
@@ -39,6 +43,10 @@ SimpleThread(void* name)
 #ifdef SEMAPHORE_TEST
     sem.P();
     DEBUG('s',"%s did P()\n",threadName);
+#endif
+#ifdef LOCK_TEST
+    l.Acquire();
+    DEBUG('s',"%s did Acquire\n",threadName);
 #endif
     
     // If the lines dealing with interrupts are commented,
@@ -58,6 +66,12 @@ SimpleThread(void* name)
     DEBUG('s',"%s is going to do V()\n",threadName);
     sem.V();
 #endif
+
+#ifdef LOCK_TEST
+    DEBUG('s',"%s is going to do Release\n",threadName);
+    l.Release();
+#endif
+
     
 }
 

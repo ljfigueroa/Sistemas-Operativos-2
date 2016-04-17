@@ -87,6 +87,9 @@ class Lock {
 
   private:
     const char* name;				// para depuraci�n
+    Thread* held_by;                            // indica que thread tiene el Acquire
+    Semaphore* sem;
+    
     // a�adir aqu� otros campos que sean necesarios
 };
 

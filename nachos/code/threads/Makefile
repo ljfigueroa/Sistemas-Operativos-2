@@ -7,7 +7,7 @@
 # All rights reserved.  See copyright.h for copyright notice and limitation 
 # of liability and disclaimer of warranty provisions.
 
-DEFINES = -DTHREADS  -DDFS_TICKS_FIX -DSEMAPHORE_TEST
+DEFINES = -DTHREADS  -DDFS_TICKS_FIX -DLOCK_TEST
 INCPATH = -I../threads -I../machine
 HFILES = $(THREAD_H)
 CFILES = $(THREAD_C)
@@ -227,7 +227,7 @@ threadtest.o: ../threads/threadtest.cc /usr/include/stdc-predef.h \
  /usr/include/x86_64-linux-gnu/bits/sys_errlist.h /usr/include/string.h \
  ../threads/thread.h ../threads/scheduler.h ../threads/list.h \
  ../machine/interrupt.h ../threads/list.h ../machine/stats.h \
- ../machine/timer.h ../threads/utility.h
+ ../machine/timer.h ../threads/utility.h ../threads/synch.h
 interrupt.o: ../machine/interrupt.cc /usr/include/stdc-predef.h \
  ../threads/copyright.h ../machine/interrupt.h ../threads/list.h \
  ../threads/copyright.h ../threads/utility.h ../machine/sysdep.h \
