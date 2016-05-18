@@ -1,8 +1,8 @@
-// synch.cc 
-//	Routines for synchronizing threads.  Three kinds of
-//	synchronization routines are defined here: semaphores, locks 
-//   	and condition variables (the implementation of the last two
-//	are left to the reader).
+// synch.cc
+//      Routines for synchronizing threads.  Three kinds of
+//      synchronization routines are defined here: semaphores, locks
+//      and condition variables (the implementation of the last two
+//      are left to the reader).
 //
 // Any implementation of a synchronization routine needs some
 // primitive atomic operation.  We assume Nachos is running on
@@ -18,7 +18,7 @@
 // that be disabled or enabled).
 //
 // Copyright (c) 1992-1993 The Regents of the University of California.
-// All rights reserved.  See copyright.h for copyright notice and limitation 
+// All rights reserved.  See copyright.h for copyright notice and limitation
 // of liability and disclaimer of warranty provisions.
 
 #include "copyright.h"
@@ -27,10 +27,10 @@
 
 //----------------------------------------------------------------------
 // Semaphore::Semaphore
-// 	Initialize a semaphore, so that it can be used for synchronization.
+//      Initialize a semaphore, so that it can be used for synchronization.
 //
-//	"debugName" is an arbitrary name, useful for debugging.
-//	"initialValue" is the initial value of the semaphore.
+//      "debugName" is an arbitrary name, useful for debugging.
+//      "initialValue" is the initial value of the semaphore.
 //----------------------------------------------------------------------
 
 Semaphore::Semaphore(const char* debugName, int initialValue)
@@ -42,8 +42,8 @@ Semaphore::Semaphore(const char* debugName, int initialValue)
 
 //----------------------------------------------------------------------
 // Semaphore::Semaphore
-// 	De-allocate semaphore, when no longer needed.  Assume no one
-//	is still waiting on the semaphore!
+//      De-allocate semaphore, when no longer needed.  Assume no one
+//      is still waiting on the semaphore!
 //----------------------------------------------------------------------
 
 Semaphore::~Semaphore()
@@ -53,35 +53,35 @@ Semaphore::~Semaphore()
 
 //----------------------------------------------------------------------
 // Semaphore::P
-// 	Wait until semaphore value > 0, then decrement.  Checking the
-//	value and decrementing must be done atomically, so we
-//	need to disable interrupts before checking the value.
+//      Wait until semaphore value > 0, then decrement.  Checking the
+//      value and decrementing must be done atomically, so we
+//      need to disable interrupts before checking the value.
 //
-//	Note that Thread::Sleep assumes that interrupts are disabled
-//	when it is called.
+//      Note that Thread::Sleep assumes that interrupts are disabled
+//      when it is called.
 //----------------------------------------------------------------------
 
 void
 Semaphore::P()
 {
-    IntStatus oldLevel = interrupt->SetLevel(IntOff);	// disable interrupts
-    
-    while (value == 0) { 			// semaphore not available
-	queue->Append(currentThread);		// so go to sleep
-	currentThread->Sleep();
-    } 
-    value--; 					// semaphore available, 
-						// consume its value
-    
-    interrupt->SetLevel(oldLevel);		// re-enable interrupts
+    IntStatus oldLevel = interrupt->SetLevel(IntOff);   // disable interrupts
+
+    while (value == 0) {                        // semaphore not available
+        queue->Append(currentThread);           // so go to sleep
+        currentThread->Sleep();
+    }
+    value--;                                    // semaphore available,
+                                                // consume its value
+
+    interrupt->SetLevel(oldLevel);              // re-enable interrupts
 }
 
 //----------------------------------------------------------------------
 // Semaphore::V
-// 	Increment semaphore value, waking up a waiter if necessary.
-//	As with P(), this operation must be atomic, so we need to disable
-//	interrupts.  Scheduler::ReadyToRun() assumes that threads
-//	are disabled when it is called.
+//      Increment semaphore value, waking up a waiter if necessary.
+//      As with P(), this operation must be atomic, so we need to disable
+//      interrupts.  Scheduler::ReadyToRun() assumes that threads
+//      are disabled when it is called.
 //----------------------------------------------------------------------
 
 void
@@ -91,44 +91,91 @@ Semaphore::V()
     IntStatus oldLevel = interrupt->SetLevel(IntOff);
 
     thread = queue->Remove();
-    if (thread != NULL)	   // make thread ready, consuming the V immediately
-	scheduler->ReadyToRun(thread);
+    if (thread != NULL)    // make thread ready, consuming the V immediately
+        scheduler->ReadyToRun(thread);
     value++;
     interrupt->SetLevel(oldLevel);
 }
 
-// Dummy functions -- so we can compile our later assignments 
-// Note -- without a correct implementation of Condition::Wait(), 
+// Dummy functions -- so we can compile our later assignments
+// Note -- without a correct implementation of Condition::Wait(),
 // the test case in the network assignment won't work!
 Lock::Lock(const char* debugName) {
 
-    sem  = new Semaphore("Lock",1);
+    sem  = new Semaphore(debugName,1);
     name = debugName;
     held_by = NULL;
-    
 }
 
 bool Lock::isHeldByCurrentThread() {
     return held_by == currentThread;
 }
+
 Lock::~Lock() {
     delete sem;
 }
+
 void Lock::Acquire() {
+
     ASSERT(!isHeldByCurrentThread());
+
     sem->P();
     held_by = currentThread;
 }
+
 void Lock::Release() {
     ASSERT(isHeldByCurrentThread());
     held_by = NULL;
     sem->V();
 }
 
-Condition::Condition(const char* debugName, Lock* conditionLock) { }
+Condition::Condition(const char* debugName, Lock* conditionLock) {
+    name = debugName;
+    lock = conditionLock;
+}
+
 Condition::~Condition() { }
-void Condition::Wait() { ASSERT(false); }
-void Condition::Signal() { }
-void Condition::Broadcast() { }
 
+void Condition::Wait() {
 
+    ASSERT(lock->isHeldByCurrentThread());
+
+    Semaphore* sem = new Semaphore(name, 0);
+    sem_list.Append(sem);
+    lock->Release();
+
+    DEBUG('s',"The condition %s is waiting\n",name);
+    sem->P();
+    DEBUG('s',"The condition %s is fulfield\n",name);
+
+    delete sem;
+    lock->Acquire();
+
+}
+void Condition::Signal() {
+
+    ASSERT(lock->isHeldByCurrentThread());
+
+    Semaphore* tmp;
+    lock->Release();
+    if (!sem_list.IsEmpty()) {
+        tmp = sem_list.Remove();
+        DEBUG('s',"The condition %s is signaling\n",name);
+        tmp->V();
+    }
+    lock->Acquire();
+
+}
+void Condition::Broadcast() {
+
+    ASSERT(lock->isHeldByCurrentThread());
+
+    Semaphore* tmp;
+    lock->Release();
+    while(!sem_list.IsEmpty()) {
+        DEBUG('s',"The condition %s is broadcasting\n",name);
+        tmp = sem_list.Remove();
+        tmp->V();
+    }
+    lock->Acquire();
+}
