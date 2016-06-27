@@ -144,9 +144,9 @@ void Condition::Wait() {
     sem_list.Append(sem);
     lock->Release();
 
-    DEBUG('s',"The condition %s is waiting\n",name);
+    DEBUG('s',"The condition > %s < is waiting\n",name);
     sem->P();
-    DEBUG('s',"The condition %s is fulfield\n",name);
+    DEBUG('s',"The condition > %s < is fulfield\n",name);
 
     delete sem;
     lock->Acquire();
@@ -160,7 +160,7 @@ void Condition::Signal() {
     lock->Release();
     if (!sem_list.IsEmpty()) {
         tmp = sem_list.Remove();
-        DEBUG('s',"The condition %s is signaling\n",name);
+        DEBUG('s',"The condition > %s < is signaling\n",name);
         tmp->V();
     }
     lock->Acquire();
@@ -173,9 +173,46 @@ void Condition::Broadcast() {
     Semaphore* tmp;
     lock->Release();
     while(!sem_list.IsEmpty()) {
-        DEBUG('s',"The condition %s is broadcasting\n",name);
+        DEBUG('s',"The condition > %s < is broadcasting\n",name);
         tmp = sem_list.Remove();
         tmp->V();
     }
     lock->Acquire();
+}
+
+Port::Port(const char* debugName)
+{
+    name = debugName;
+    lock = new Lock("Port lock");
+    emptyBuffer = new Condition("Empty buffer",lock);
+    buffer = new List<int>();
+}
+
+Port::~Port()
+{
+    delete lock;
+    delete emptyBuffer;
+    delete buffer;
+}
+
+void Port::Send(int message)
+{
+    lock->Acquire();
+    while (!buffer->IsEmpty()) {
+        emptyBuffer->Wait();
+    }
+    buffer->Append(message);
+    emptyBuffer->Signal();
+    lock->Release();
+}
+
+void Port::Receive(int* message)
+{
+    lock->Acquire();
+    while (buffer->IsEmpty()) {
+        emptyBuffer->Wait();
+    }
+    *message = buffer->Remove();
+    emptyBuffer->Signal();
+    lock->Release();
 }

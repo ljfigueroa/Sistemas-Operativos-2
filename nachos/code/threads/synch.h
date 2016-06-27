@@ -174,4 +174,20 @@ class Condition {
 
 */
 
+
+class Port {
+public:
+    Port(const char* debugName);
+    ~Port();
+    const char* getName() { return (name); }
+
+    void Send(int message);
+    void Receive(int* message);
+private:
+    const char* name;
+    Lock* lock;
+    Condition* emptyBuffer;
+    List<int> *buffer;
+};
+
 #endif // SYNCH_H
