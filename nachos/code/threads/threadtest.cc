@@ -91,7 +91,7 @@ SimpleTest()
     for(int thread = 1; thread < THREAD_NUM; thread++) {
     char *threadname = new char[128];
     sprintf(threadname,"Thread %d",thread);
-    Thread* newThread = new Thread (threadname);
+    Thread* newThread = new Thread (threadname, false);
     newThread->Fork (SimpleThread, (void*)threadname);
     }
 
@@ -143,7 +143,7 @@ ConditionTest()
 {
     DEBUG('t', "Entering ConditionTest");
 
-    Thread* newThread = new Thread ("Producer");
+    Thread* newThread = new Thread ("Producer",false);
     newThread->Fork (Producer, NULL);
 
     Consumer(NULL);
@@ -172,7 +172,7 @@ PortTest()
 {
     int num;
 
-    Thread* newThread = new Thread ("Pong");
+    Thread* newThread = new Thread ("Pong",false);
     newThread->Fork(PongThread, NULL);
 
     currentThread->Yield();
@@ -188,8 +188,21 @@ PortTest()
     printf("Ping: Got a %d\n", num);
 }
 
-// conditiontest.cc
-//  Simple test case for the condition variable assignment.
+void dummyFun(void* n) 
+{
+    sleep(3);
+    printf("dummyFun end\n");
+}
+
+void JoinTest()
+{
+    Thread* t = new Thread("Son", true);
+    t->Fork(dummyFun, NULL);
+    printf("About to do Join\n");
+    t->Join();
+    printf("JoinTest ended\n");
+}
+
 
 void ThreadTest()
 {
@@ -203,5 +216,9 @@ void ThreadTest()
 
 #ifdef PORT_TEST
     PortTest();
+#endif
+
+#ifdef JOIN_TEST
+    JoinTest();
 #endif
 }

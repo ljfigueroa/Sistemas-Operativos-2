@@ -32,12 +32,17 @@ const unsigned STACK_FENCEPOST = 0xdeadbeef;
 //	"threadName" is an arbitrary string, useful for debugging.
 //----------------------------------------------------------------------
 
-Thread::Thread(const char* threadName)
+Thread::Thread(const char* threadName, bool joinIscalled)
 {
     name = threadName;
     stackTop = NULL;
     stack = NULL;
     status = JUST_CREATED;
+
+    joinLater = joinIscalled;
+    if (joinLater)
+      joinPort = new Port("Join Port");
+
 #ifdef USER_PROGRAM
     space = NULL;
 #endif
@@ -62,6 +67,9 @@ Thread::~Thread()
     ASSERT(this != currentThread);
     if (stack != NULL)
 	DeallocBoundedArray((char *) stack, StackSize * sizeof(HostMemoryAddress));
+
+    if (joinLater)
+      delete joinPort;
 }
 
 //----------------------------------------------------------------------
@@ -146,6 +154,9 @@ Thread::CheckOverflow()
 void
 Thread::Finish ()
 {
+    if (joinLater)
+	 joinPort->Send(0);
+	 
     interrupt->SetLevel(IntOff);		
     ASSERT(this == currentThread);
     
@@ -310,3 +321,13 @@ Thread::RestoreUserState()
 	machine->WriteRegister(i, userRegisters[i]);
 }
 #endif
+
+void
+Thread::Join()
+{
+  ASSERT(joinLater);
+  DEBUG('t', "Joining thread \"%s\"\n", getName());
+  int tmp;
+  joinPort->Receive(&tmp);
+  DEBUG('t', "---------> Join thread \"%s\" ended\n", getName());
+}
