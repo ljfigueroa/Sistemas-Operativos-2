@@ -188,8 +188,10 @@ PortTest()
     printf("Ping: Got a %d\n", num);
 }
 
+
 void dummyFun(void* n) 
 {
+    printf("waiting 3 sec\n");
     sleep(3);
     printf("dummyFun end\n");
 }

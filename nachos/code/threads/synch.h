@@ -187,6 +187,7 @@ private:
     const char* name;
     Lock* lock;
     Condition* emptyBuffer;
+    Condition* consumeBuffer;
     List<int> *buffer;
 };
 
