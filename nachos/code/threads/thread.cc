@@ -32,12 +32,19 @@ const unsigned STACK_FENCEPOST = 0xdeadbeef;
 //	"threadName" is an arbitrary string, useful for debugging.
 //----------------------------------------------------------------------
 
-Thread::Thread(const char* threadName)
+Thread::Thread(const char* threadName, bool joinIscalled, int baseline_priority)
 {
     name = threadName;
     stackTop = NULL;
     stack = NULL;
     status = JUST_CREATED;
+    upriority = baseline_priority;
+    spriority = baseline_priority;
+    
+    joinLater = joinIscalled;
+    if (joinLater)
+      joinPort = new Port("Join Port");
+
 #ifdef USER_PROGRAM
     space = NULL;
 #endif
@@ -62,6 +69,9 @@ Thread::~Thread()
     ASSERT(this != currentThread);
     if (stack != NULL)
 	DeallocBoundedArray((char *) stack, StackSize * sizeof(HostMemoryAddress));
+
+    if (joinLater)
+      delete joinPort;
 }
 
 //----------------------------------------------------------------------
@@ -146,6 +156,9 @@ Thread::CheckOverflow()
 void
 Thread::Finish ()
 {
+    if (joinLater)
+	 joinPort->Send(0);
+	 
     interrupt->SetLevel(IntOff);		
     ASSERT(this == currentThread);
     
@@ -275,8 +288,7 @@ Thread::StackAllocate (VoidFunctionPtr func, void* arg)
     machineState[WhenDonePCState] = (HostMemoryAddress) ThreadFinish;
 }
 
-#ifdef USER_PROGRAM
-#include "machine.h"
+#ifdef USER_include "machine.h"
 
 //----------------------------------------------------------------------
 // Thread::SaveUserState
@@ -310,3 +322,13 @@ Thread::RestoreUserState()
 	machine->WriteRegister(i, userRegisters[i]);
 }
 #endif
+
+void
+Thread::Join()
+{
+  ASSERT(joinLater);
+  DEBUG('t', "JOIN: thread \"%s\"\n", getName());
+  int tmp;
+  joinPort->Receive(&tmp);
+  DEBUG('t', "JOIN: thread \"%s\" ended\n", getName());
+}

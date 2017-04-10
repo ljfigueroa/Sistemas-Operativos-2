@@ -70,6 +70,8 @@ enum ThreadStatus { JUST_CREATED, RUNNING, READY, BLOCKED };
 //  Some threads also belong to a user address space; threads
 //  that only run in the kernel have a NULL address space.
 
+class Port;
+
 class Thread {
   private:
     // NOTE: DO NOT CHANGE the order of these first two members.
@@ -78,7 +80,7 @@ class Thread {
     HostMemoryAddress machineState[MachineStateSize];	// all registers except for stackTop
 
   public:
-    Thread(const char* debugName);	// initialize a Thread 
+    Thread(const char* debugName, bool joinLater, int baseline_priority);    // initialize a Thread 
     ~Thread(); 				// deallocate a Thread
 					// NOTE -- thread being deleted
 					// must not be running when delete 
@@ -95,6 +97,10 @@ class Thread {
     
     void CheckOverflow();   			// Check if thread has 
 						// overflowed its stack
+    void Join();
+    int userPriority() { return upriority; }
+    int getPriority()  { return spriority; }
+    
     void setStatus(ThreadStatus st) { status = st; }
     const char* getName() { return (name); }
     void Print() { printf("%s, ", name); }
@@ -107,10 +113,17 @@ class Thread {
 					// (If NULL, don't deallocate stack)
     ThreadStatus status;		// ready, running or blocked
     const char* name;
+    int upriority;                      // priority assigned by the user
+    int spriority;                      // priority assigned by the SO
 
     void StackAllocate(VoidFunctionPtr func, void* arg);
     					// Allocate a stack for thread.
 					// Used internally by Fork()
+    bool joinLater;                     // True if the function Join()
+					// is called later, False in
+					// any other case.
+    Port* joinPort;                     // Provides syncronization
+					// between father-son threads.
 
 #ifdef USER_PROGRAM
 // A thread running a user program actually has *two* sets of CPU registers -- 
